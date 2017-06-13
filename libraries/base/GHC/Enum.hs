@@ -6,6 +6,8 @@
 {-# LANGUAGE Trustworthy #-}
 {-# OPTIONS_HADDOCK hide #-}
 
+{-@ embed GHC.Types.Word as int @-}
+
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  GHC.Enum

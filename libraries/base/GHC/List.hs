@@ -41,6 +41,8 @@ import GHC.Integer (Integer)
 infixl 9  !!
 infix  4 `elem`, `notElem`
 
+{-@ type ListNE a = {v:[a] | 0 < len v} @-}
+
 --------------------------------------------------------------
 -- List-manipulation functions
 --------------------------------------------------------------
@@ -380,6 +382,7 @@ foldr1 f = go
 -- Note that
 --
 -- > head (scanr f z xs) == foldr f z xs.
+{-@ scanr :: (a -> b -> b) -> b -> [a] -> ListNE b @-}
 {-# NOINLINE [1] scanr #-}
 scanr                   :: (a -> b -> b) -> b -> [a] -> [b]
 scanr _ q0 []           =  [q0]
@@ -404,6 +407,7 @@ scanrFB f c = \x (r, est) -> (f x r, r `c` est)
  #-}
 
 -- | 'scanr1' is a variant of 'scanr' that has no starting value argument.
+{-@ scanr1 :: (a -> a -> a) -> ListNE a -> ListNE a @-}
 scanr1                  :: (a -> a -> a) -> [a] -> [a]
 scanr1 _ []             =  []
 scanr1 _ [x]            =  [x]
@@ -442,11 +446,12 @@ minimum xs              =  foldl1 min xs
 -- of @f@ to @x@:
 --
 -- > iterate f x == [x, f x, f (f x), ...]
-
+{-@ lazy iterate @-}
 {-# NOINLINE [1] iterate #-}
 iterate :: (a -> a) -> a -> [a]
 iterate f x =  x : iterate f (f x)
 
+{-@ lazy iterateFB @-}
 {-# INLINE [0] iterateFB #-} -- See Note [Inline FB functions]
 iterateFB :: (a -> b -> b) -> (a -> a) -> a -> b
 iterateFB c f x0 = go x0
@@ -459,11 +464,13 @@ iterateFB c f x0 = go x0
 
 
 -- | 'repeat' @x@ is an infinite list, with @x@ the value of every element.
+{-@ lazy repeat @-}
 repeat :: a -> [a]
 {-# INLINE [0] repeat #-}
 -- The pragma just gives the rules more chance to fire
 repeat x = xs where xs = x : xs
 
+{-@ lazy repeatFB @-}
 {-# INLINE [0] repeatFB #-}     -- ditto -- See Note [Inline FB functions]
 repeatFB :: (a -> b -> b) -> a -> b
 repeatFB c x = xs where xs = x `c` xs
@@ -486,6 +493,7 @@ replicate n x           =  take n (repeat x)
 -- the infinite repetition of the original list.  It is the identity
 -- on infinite lists.
 
+{-@ lazy GHC.List.cycle @-}
 cycle                   :: [a] -> [a]
 cycle []                = errorEmptyList "cycle"
 cycle xs                = xs' where xs' = xs ++ xs'
@@ -567,6 +575,7 @@ take n xs | 0 < n     = unsafeTake n xs
 
 -- A version of take that takes the whole list if it's given an argument less
 -- than 1.
+{-@ unsafeTake :: {n:Int | 0 < n} -> [a] -> [a] @-}
 {-# NOINLINE [1] unsafeTake #-}
 unsafeTake :: Int -> [a] -> [a]
 unsafeTake !_  []     = []
