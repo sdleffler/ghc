@@ -49,19 +49,18 @@ infix  4 `elem`, `notElem`
 
 -- | Extract the first element of a list, which must be non-empty.
 {-@ head :: NEList a -> a @-}
+{-@ lazyvar badHead @-}
 head                    :: [a] -> a
 head (x:_)              =  x
 head []                 =  badHead
+    where badHead = errorEmptyList "head"
 {-# NOINLINE [1] head #-}
-
-{-@ assume badHead :: a @-}
-badHead = errorEmptyList "head"
 
 -- This rule is useful in cases like
 --      head [y | (x,y) <- ps, x==t]
 {-# RULES
 "head/build"    forall (g::forall b.(a->b->b)->b->b) .
-                head (build g) = g (\x _ -> x) badHead
+                head (build g) = g (\x _ -> x) (errorEmptyList "head")
 "head/augment"  forall xs (g::forall b. (a->b->b) -> b -> b) .
                 head (augment g xs) = g (\x _ -> x) (head xs)
  #-}
@@ -97,9 +96,10 @@ last xs = foldl (\_ x -> x) lastError xs
 {-# INLINE last #-}
 -- The inline pragma is required to make GHC remember the implementation via
 -- foldl.
-{-@ assume lastError :: a @-}
 lastError :: a
-lastError = errorEmptyList "last"
+lastError = errorEmptyList impossibleString
+    where {-@ assume impossibleString :: Impossible String @-}
+          impossibleString = "last"
 #endif
 
 -- | Return all the elements of a list except the last one.
@@ -868,9 +868,10 @@ xs     !! n | n < 0 =  errorWithoutStackTrace "Prelude.!!: negative index"
 -- We may want to fuss around a bit with NOINLINE, and
 -- if so we should be careful not to trip up known-bottom
 -- optimizations.
-{-@ assume tooLarge :: Int -> a @-}
 tooLarge :: Int -> a
-tooLarge _ = errorWithoutStackTrace (prel_list_str ++ "!!: index too large")
+tooLarge _ = errorWithoutStackTrace impossibleString 
+    where {-@ assume impossibleString :: Impossible String @-}
+          impossibleString = (prel_list_str ++ "!!: index too large")
 
 {-@ (!!) :: xs:NEList a -> {n:Int | n >= 0 && n < len xs} -> a @-}
 {-@ lazyvar negIndex @-}
