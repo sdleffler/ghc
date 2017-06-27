@@ -33,6 +33,9 @@ import GHC.Integer ()   -- Make sure Integer is compiled first
 import {-# SOURCE #-} GHC.Exception( errorCallWithCallStackException )
 
 -- | 'error' stops execution and displays an error message.
+{-@ error :: forall (r :: RuntimeRep). forall (a :: TYPE r).
+             HasCallStack => {_:[Char] | false} -> a
+@-}
 error :: forall (r :: RuntimeRep). forall (a :: TYPE r).
          HasCallStack => [Char] -> a
 error s = raise# (errorCallWithCallStackException s ?callStack)
@@ -44,6 +47,9 @@ error s = raise# (errorCallWithCallStackException s ?callStack)
 -- | A variant of 'error' that does not produce a stack trace.
 --
 -- @since 4.9.0.0
+{-@ errorWithoutStackTrace :: forall (r :: RuntimeRep). forall (a :: TYPE r).
+                              {_:[Char] | false} -> a
+@-}
 errorWithoutStackTrace :: forall (r :: RuntimeRep). forall (a :: TYPE r).
                           [Char] -> a
 errorWithoutStackTrace s =

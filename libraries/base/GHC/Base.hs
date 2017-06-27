@@ -103,6 +103,15 @@ Other Prelude modules are much easier with fewer complex dependencies.
 --
 -----------------------------------------------------------------------------
 
+-----------------------------------------------------------------------------
+-- LiquidHaskell
+
+{-@ embed Int as int @-}
+
+{-@ type Impossible a = {_:a | false} @-}
+
+-----------------------------------------------------------------------------
+
 #include "MachDeps.h"
 
 module GHC.Base

@@ -41,17 +41,20 @@ import GHC.Integer (Integer)
 infixl 9  !!
 infix  4 `elem`, `notElem`
 
+{-@ type NEList a = {xs:[a] | len xs > 0} @-}
+
 --------------------------------------------------------------
 -- List-manipulation functions
 --------------------------------------------------------------
 
 -- | Extract the first element of a list, which must be non-empty.
+{-@ head :: NEList a -> a @-}
 head                    :: [a] -> a
 head (x:_)              =  x
 head []                 =  badHead
 {-# NOINLINE [1] head #-}
 
-badHead :: a
+{-@ assume badHead :: a @-}
 badHead = errorEmptyList "head"
 
 -- This rule is useful in cases like
@@ -73,6 +76,7 @@ uncons []               = Nothing
 uncons (x:xs)           = Just (x, xs)
 
 -- | Extract the elements after the head of a list, which must be non-empty.
+{-@ tail :: NEList a -> [a] @-}
 tail                    :: [a] -> [a]
 tail (_:xs)             =  xs
 tail []                 =  errorEmptyList "tail"
@@ -80,10 +84,12 @@ tail []                 =  errorEmptyList "tail"
 -- | Extract the last element of a list, which must be finite and non-empty.
 last                    :: [a] -> a
 #ifdef USE_REPORT_PRELUDE
+{-@ last :: NEList a -> a @-}
 last [x]                =  x
 last (_:xs)             =  last xs
 last []                 =  errorEmptyList "last"
 #else
+{-@ assume last :: NEList a -> a @-}
 -- Use foldl to make last a good consumer.
 -- This will compile to good code for the actual GHC.List.last.
 -- (At least as long it is eta-expaned, otherwise it does not, #10260.)
@@ -91,12 +97,14 @@ last xs = foldl (\_ x -> x) lastError xs
 {-# INLINE last #-}
 -- The inline pragma is required to make GHC remember the implementation via
 -- foldl.
+{-@ assume lastError :: a @-}
 lastError :: a
 lastError = errorEmptyList "last"
 #endif
 
 -- | Return all the elements of a list except the last one.
 -- The list must be non-empty.
+{-@ init :: NEList a -> [a] @-}
 init                    :: [a] -> [a]
 #ifdef USE_REPORT_PRELUDE
 init [x]                =  []
@@ -221,11 +229,13 @@ foldl' k z0 xs =
 
 -- | 'foldl1' is a variant of 'foldl' that has no starting value argument,
 -- and thus must be applied to non-empty lists.
+{-@ foldl1              :: (a -> a -> a) -> NEList a -> a @-}
 foldl1                  :: (a -> a -> a) -> [a] -> a
 foldl1 f (x:xs)         =  foldl f x xs
 foldl1 _ []             =  errorEmptyList "foldl1"
 
 -- | A strict version of 'foldl1'
+{-@ foldl1'              :: (a -> a -> a) -> NEList a -> a @-}
 foldl1'                  :: (a -> a -> a) -> [a] -> a
 foldl1' f (x:xs)         =  foldl' f x xs
 foldl1' _ []             =  errorEmptyList "foldl1'"
@@ -353,7 +363,7 @@ match on everything past the :, which is just the tail of scanl.
 
 -- | 'foldr1' is a variant of 'foldr' that has no starting value argument,
 -- and thus must be applied to non-empty lists.
-
+{-@ foldr1 :: (a -> a -> a) -> NEList a -> a @-}
 foldr1                  :: (a -> a -> a) -> [a] -> a
 foldr1 f = go
   where go [x]            =  x
@@ -399,6 +409,7 @@ scanr1 f (x:xs)         =  f x q : qs
 -- which must be non-empty, finite, and of an ordered type.
 -- It is a special case of 'Data.List.maximumBy', which allows the
 -- programmer to supply their own comparison function.
+{-@ maximum :: (Ord a) => NEList a -> a @-}
 maximum                 :: (Ord a) => [a] -> a
 {-# INLINEABLE maximum #-}
 maximum []              =  errorEmptyList "maximum"
@@ -414,6 +425,7 @@ maximum xs              =  foldl1 max xs
 -- which must be non-empty, finite, and of an ordered type.
 -- It is a special case of 'Data.List.minimumBy', which allows the
 -- programmer to supply their own comparison function.
+{-@ minimum :: (Ord a) => NEList a -> a @-}
 minimum                 :: (Ord a) => [a] -> a
 {-# INLINEABLE minimum #-}
 minimum []              =  errorEmptyList "minimum"
@@ -428,10 +440,12 @@ minimum xs              =  foldl1 min xs
 --
 -- > iterate f x == [x, f x, f (f x), ...]
 
+{-@ lazy iterate @-}
 {-# NOINLINE [1] iterate #-}
 iterate :: (a -> a) -> a -> [a]
 iterate f x =  x : iterate f (f x)
 
+{-@ lazy iterateFB @-}
 {-# NOINLINE [0] iterateFB #-}
 iterateFB :: (a -> b -> b) -> (a -> a) -> a -> b
 iterateFB c f x0 = go x0
@@ -444,11 +458,13 @@ iterateFB c f x0 = go x0
 
 
 -- | 'repeat' @x@ is an infinite list, with @x@ the value of every element.
+{-@ lazy repeat @-}
 repeat :: a -> [a]
 {-# INLINE [0] repeat #-}
 -- The pragma just gives the rules more chance to fire
 repeat x = xs where xs = x : xs
 
+{-@ lazy repeatFB @-}
 {-# INLINE [0] repeatFB #-}     -- ditto
 repeatFB :: (a -> b -> b) -> a -> b
 repeatFB c x = xs where xs = x `c` xs
@@ -470,7 +486,8 @@ replicate n x           =  take n (repeat x)
 -- | 'cycle' ties a finite list into a circular one, or equivalently,
 -- the infinite repetition of the original list.  It is the identity
 -- on infinite lists.
-
+{-@ lazy cycle @-}
+{-@ cycle :: NEList a -> NEList a @-}
 cycle                   :: [a] -> [a]
 cycle []                = errorEmptyList "cycle"
 cycle xs                = xs' where xs' = xs ++ xs'
@@ -851,18 +868,20 @@ xs     !! n | n < 0 =  errorWithoutStackTrace "Prelude.!!: negative index"
 -- We may want to fuss around a bit with NOINLINE, and
 -- if so we should be careful not to trip up known-bottom
 -- optimizations.
+{-@ assume tooLarge :: Int -> a @-}
 tooLarge :: Int -> a
 tooLarge _ = errorWithoutStackTrace (prel_list_str ++ "!!: index too large")
 
-negIndex :: a
-negIndex = errorWithoutStackTrace $ prel_list_str ++ "!!: negative index"
-
+{-@ (!!) :: xs:NEList a -> {n:Int | n >= 0 && n < len xs} -> a @-}
+{-@ lazyvar negIndex @-}
 {-# INLINABLE (!!) #-}
 xs !! n
   | n < 0     = negIndex
   | otherwise = foldr (\x r k -> case k of
                                    0 -> x
                                    _ -> r (k-1)) tooLarge xs n
+  where
+        negIndex = errorWithoutStackTrace $ prel_list_str ++ "!!: negative index"
 #endif
 
 --------------------------------------------------------------
@@ -993,7 +1012,7 @@ unzip3   =  foldr (\(a,b,c) ~(as,bs,cs) -> (a:as,b:bs,c:cs))
 
 -- Common up near identical calls to `error' to reduce the number
 -- constant strings created when compiled:
-
+{-@ errorEmptyList :: Impossible String -> a @-}
 errorEmptyList :: String -> a
 errorEmptyList fun =
   errorWithoutStackTrace (prel_list_str ++ fun ++ ": empty list")
