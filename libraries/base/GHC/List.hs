@@ -34,6 +34,7 @@ module GHC.List (
  ) where
 
 import Data.Maybe
+import Data.Tuple (fst, snd)
 import GHC.Base
 import GHC.Num (Num(..))
 import GHC.Integer (Integer)
@@ -679,6 +680,7 @@ splitAt n ls
 --
 -- 'span' @p xs@ is equivalent to @('takeWhile' p xs, 'dropWhile' p xs)@
 
+{-@ span :: (a -> Bool) -> xs:[a] -> {p:([a], [a]) | len xs == len (fst p) + len (snd p)} @-}
 span                    :: (a -> Bool) -> [a] -> ([a],[a])
 span _ xs@[]            =  (xs, xs)
 span p xs@(x:xs')
