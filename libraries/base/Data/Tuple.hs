@@ -31,10 +31,12 @@ default ()              -- Double isn't available yet
 -- Standard functions over tuples
 
 -- | Extract the first component of a pair.
+{-@ measure fst :: (a, b) -> a @-}
 fst                     :: (a,b) -> a
 fst (x,_)               =  x
 
 -- | Extract the second component of a pair.
+{-@ measure snd :: (a, b) -> b @-}
 snd                     :: (a,b) -> b
 snd (_,y)               =  y
 
