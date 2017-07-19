@@ -107,8 +107,12 @@ Other Prelude modules are much easier with fewer complex dependencies.
 -- LiquidHaskell
 
 {-@ embed Int as int @-}
+{-@ embed Int# as int @-}
 
 {-@ type Impossible a = {_:a | false} @-}
+
+{-@ type Nat = {x:Int | x > 0} @-}
+{-@ type Nat# = {x:Int# | x > 0} @-}
 
 -----------------------------------------------------------------------------
 
