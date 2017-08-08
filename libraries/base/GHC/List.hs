@@ -50,11 +50,12 @@ infix  4 `elem`, `notElem`
 
 -- | Extract the first element of a list, which must be non-empty.
 {-@ head :: NEList a -> a @-}
-{-@ lazyvar badHead @-}
+{-@ measure head :: NEList a -> a
+    head (x:_) = x
+    @-}
 head                    :: [a] -> a
 head (x:_)              =  x
-head []                 =  badHead
-    where badHead = errorEmptyList "head"
+head []                 =  errorEmptyList "head"
 {-# NOINLINE [1] head #-}
 
 -- This rule is useful in cases like
@@ -154,6 +155,11 @@ idLength = id
 -- those elements that satisfy the predicate; i.e.,
 --
 -- > filter p xs = [ x | x <- xs, p x]
+
+{-@ filter :: forall <p :: a -> Bool, w :: a -> Bool -> Bool>.
+                  {y :: a, b :: {v:Bool<w y> | v} |- {v:a | v == y} <: a<p>}
+                  (x:a -> Bool<w x>) -> [a] -> [a<p>]
+  @-}
 
 {-# NOINLINE [1] filter #-}
 filter :: (a -> Bool) -> [a] -> [a]
